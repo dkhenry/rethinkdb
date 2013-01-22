@@ -10,13 +10,22 @@ usage () {
 }
 
 main () {
+        do_not_commit=false
+
+        if ! git diff-index --quiet --cached HEAD; then
+            echo Please commit your changes before running bump_version
+            echo The following changes are waiting to be committed:
+            git diff --cached --summary
+            exit 1
+        fi
+
         cd "`git rev-parse --show-toplevel`"
-        rethinkdb_full_version="`scripts/gen-version.sh`"
-        rethinkdb_version="${rethinkdb_full_version%%-*}"
-        rethinkdb_top_version="`top "$rethinkdb_version"`"
+        rethinkdb_full_version=`scripts/gen-version.sh`
+        rethinkdb_version=${rethinkdb_full_version%%-*}
+        rethinkdb_top_version=`top "$rethinkdb_version"`
         cd drivers
         
-        if [ $# == 0 ]; then
+        if [[ $# -eq 0 ]]; then
             usage
         fi
 
@@ -42,32 +51,46 @@ revision () {
 }
 
 bump_javascript () {
-    current_version="$(node -e "p=$(cat javascript/package.json); console.log(p.version)")"
-    new_version="`bump javascript "$current_version" "$1"`"
-    node -e "p=`cat javascript/package.json`; p.version = '$new_version'; console.log(p)" > javascript/package.json
+    current_version=$(node -e "p=$(cat javascript/package.json); console.log(p.version)")
+    new_version=`bump javascript "${current_version%-*}" "$1"`
+    node -e "p=`cat javascript/package.json`; p.version = '$new_version-0'; console.log(p)" > javascript/package.json
+    driver_commit javascript "$new_version" javascript/package.json
 }
 
 bump_python () {
-    current_version="`perl -ne '/version="(.*?)"/ && print $1' python/setup.py`"
-    new_version="`bump python "$current_version" "$1"`"
-    perl -i -pe 's/version=".*?"/version="'"$new_version"'"/' python/setup.py
+    current_version=`perl -ne '/version="(.*?)-/ && print $1' python/setup.py`
+    new_version=`bump python "$current_version" "$1"`
+    perl -i -pe 's/version=".*?"/version="'"$new_version-1"'"/' python/setup.py
+    driver_commit python "$new_version" python/setup.py
 }
 
 bump_ruby () {
-    current_version="`perl -ne "/version.*?= '(.*?)'/ && print "'$'"1" ruby/rethinkdb.gemspec`"
-    new_version="`bump python "$current_version" "$1"`"
+    current_version=`perl -ne "/version.*?= '(.*?)'/ && print "'$'"1" ruby/rethinkdb.gemspec`
+    new_version=`bump ruby "$current_version" "$1"`
     perl -i -pe 's/(version.*?= '"'"').*?('"'"')/$1 . "'"$new_version"'" . $2/e' ruby/rethinkdb.gemspec
+    driver_commit ruby "$new_version" ruby/rethinkdb.gemspec
+}
+
+# driver_commit <driver name> <new version> <file to comit>
+driver_commit () {
+    if ! $do_not_commit; then
+        git add "$3"
+        git commit -m "Update $1 driver version to $2"
+        git tag -a -m "$1 driver version $2" "$1-v$2"
+    
+        success
+    fi
 }
 
 # bump <driver name> <driver version> <rethinkdb top version>
 bump () {
     echo Currrent $1 version: "'$2'" >&3
-    current_top_version="`top "$2"`"
-    current_revision="`revision "$2"`"
-    if [ "$current_top_version" == "$3" ]; then
-        new_version="$current_top_version.`expr "$current_revision" + 1`"
+    current_top_version=`top "$2"`
+    current_revision=`revision "$2"`
+    if [[ "$current_top_version" == "$3" ]]; then
+        new_version=$current_top_version.$((current_revision + 1))
     else
-        new_version="$3.0"
+        new_version=$3.0
     fi
     echo New $1 version: "'$new_version'" >&3
     echo -n "$new_version"
@@ -75,59 +98,79 @@ bump () {
 
 bump_major () {
     echo Current rethinkdb version: $rethinkdb_version
-    new_version="`expr ${rethinkdb_version%%.*} + 1`.0.0"
+    new_version=$((${rethinkdb_version%%.*} + 1)).0.0
     echo New rethinkdb version: $new_version
     bump_rethinkdb "$new_version" bump_drivers
 }
 
 bump_minor () {
     echo Current rethinkdb version: $rethinkdb_version
-    major="${rethinkdb_top_version%.*}"
-    minor="${rethinkdb_top_version#*.}"
-    new_version="$major.`expr "$minor" + 1`.0"
+    major=${rethinkdb_top_version%.*}
+    minor=${rethinkdb_top_version#*.}
+    new_version=$major.$((minor+1)).0
     echo New rethinkdb version: $new_version
     bump_rethinkdb "$new_version" bump_drivers
 }
 
 bump_revision () {
     echo Current rethinkdb version: $rethinkdb_version
-    revision="`revision "$rethinkdb_version"`"
-    new_version="$rethinkdb_top_version.`expr "$revision" + 1`"
+    revision=`revision "$rethinkdb_version"`
+    new_version=$rethinkdb_top_version.$((revision + 1))
     echo New rethinkdb version: $new_version
     bump_rethinkdb "$new_version" do_not_bump_drivers
 }
 
 bump_rethinkdb () {
-    if grep -q "$1" ../NOTES; then
-        if grep -q "INSERT THE LIST OF CHANGES HERE" ../NOTES ||
-           grep -q "RELEASE NAME" ../NOTES; then
-            echo "[1mAction required: List the changes in the NOTES file and run $0[0m"
-            echo "Edit the lines containing 'INSERT THE LIST OF CHANGES HERE'"
-            echo "Add the correct version name instead of 'RELEASE NAME'"
-            exit
-        else
-            echo NOTES file seems up to date
-        fi
-    else
+    if test -t 0; then # stdin is a terminal
         cat > ../NOTES.new <<EOF
 # Release $1 (RELEASE NAME) #
 
 ## Changes ##
 
-* >>> INSERT THE LIST OF CHANGES HERE
+* ENTER THE RELEASE NOTES HERE
+EOF
+        
+        while true; do
+            ${EDITOR:-vim} ../NOTES.new
+            
+            if grep -q RELEASE ../NOTES; then
+                echo -n "The release notes are not complete. Edit or abort? [eA] "
+                read ans
+                if [[ "$ans" != "e" ]]; then
+                    echo Aborting.
+                    exit 1
+                fi
+            else
+                cat ../NOTES.new
+                echo
+                echo -n "Proceed with the version bump? [yN]"
+                read ans
+                if [[ "$ans" != "y" ]]; then
+                    echo Aborting.
+                    exit 1
+                else
+                    break
+                fi
+            fi
+        done
+    else
+        # stdin is not a terminal.
+        cat > ../NOTES.new
+    fi
+
+    cat >> ../NOTES.new <<EOF
 
 ---
 
 EOF
-        cat ../NOTES >> ../NOTES.new
-        mv -f ../NOTES.new ../NOTES
-        echo "[1mAction required: List the changes in the NOTES file and run $0 again[0m"
-        exit
-    fi
+    cat ../NOTES >> ../NOTES.new
+    mv -f ../NOTES.new ../NOTES
+
     git add ../NOTES
 
-    if [ "$2" == bump_drivers ]; then
-        rethindb_top_version="`top "$1"`"
+    if [[ "$2" == bump_drivers ]]; then
+        do_not_commit=true
+        rethindb_top_version=`top "$1"`
         bump_javascript "$rethindb_top_version"
         bump_python "$rethindb_top_version"
         bump_ruby "$rethindb_top_version"
@@ -137,8 +180,12 @@ EOF
     git commit -m "Prepare for v$1 release"
     git tag -a -m "v$1 release" "v$1"
 
+    success
+}
+
+success () {
     echo "New version is tagged and commited."
-    echo "You must manually run [1mgit push[0m to share this release"
+    echo "You must manually run \`git push' and \`git push --tags' to share this release"
 }
 
 main "$@" 3>&1
