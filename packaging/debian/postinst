@@ -24,6 +24,17 @@ case "$1" in
     update-rc.d rethinkdb defaults ;
     invoke-rc.d rethinkdb start ;
     ;;
+
+  rethinkdb_existing_config_files=/etc/rethinkdb/instances.d/*.conf
+  if [ "$rethinkdb_existing_config_files" = "" ]; then
+    echo The RethinkDB startup service is installed but disabled. To configure RethinkDB,
+    echo follow the instructions in the guide located at http://www.rethinkdb.com/docs/guides/startup/
+  fi
+
+  if [ "$1" = "configure" ]; then
+    adduser --system --quiet --group --no-create-home rethinkdb || true
+  fi
+
   *)
     echo "Warning: RethinkDB postinst script called with unknown set of arguments: $*"
     ;;

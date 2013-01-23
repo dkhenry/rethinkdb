@@ -1,12 +1,56 @@
+#
+# RethinkDB instance configuration sample
+#
+#
 # Give this file the extension .conf and put it in /etc/rethinkdb/instances.d in order to enable it.
-# It is generally necessary to run
-# rethinkdb create -d /var/lib/rethinkdb/instances.d/default ;
-# as the target user before enabling this configuration.
-runuser=somebody
-rungroup=somegroup
-directory=/var/lib/rethinkdb/instances.d/default
-pid-file=/var/run/rethinkdb/instances.d/default.pid
-driver-port=28015
-cluster-port=29015
-http-port=8080
+#
+# See http://www.rethinkdb.com/docs/guides/startup/ for the complete documentation
 
+
+###############################
+## Init script configuration
+###############################
+
+## User and group used to run rethinkdb
+# runuser=rethinkdb
+# rungroup=rethinkdb
+
+## stash the pid in this file when the process is running
+# pid-file=/var/run/rethinkdb/instances.d/default.pid
+
+###############################
+## RethinkDB configuration
+###############################
+
+### File path options
+
+## Directory to store data and metadata
+# directory=/var/lib/rethinkdb/default
+
+### Network options
+
+## Address of local interfaces to listen on when accepting connections
+## May be 'all' or an IP address, loopback addresses are enabled by default
+# bind=127.0.0.1
+
+## port for rethinkdb protocol for client drivers
+# driver-port=28015
+
+## port for receiving connectiosn from other nodes
+# cluster-port=29015
+
+## host:port of a node that rethinkdb will connect to
+# join=example.com:29015
+
+## all ports used lcoally will have this value added
+# port-offset=0
+
+### Web options
+
+## Port for the http admin console
+# http-port=8080
+
+### CPU options
+
+## The number of cores to use
+# cores=24
