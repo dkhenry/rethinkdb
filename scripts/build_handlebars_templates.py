@@ -71,7 +71,7 @@ try:
             f.write(named_parts[name])
 
     # Now, we call handlebars.
-    subprocess.call([HANDLEBARS_EXE, '-m', WEB_TEMP_DIR, '-f', OUTPUT_DIR + '/template.js']);
+    subprocess.check_call([HANDLEBARS_EXE, '-m', WEB_TEMP_DIR, '-f', OUTPUT_DIR + '/template.js']);
 
 finally:
     shutil.rmtree(WEB_TEMP_DIR)

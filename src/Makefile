@@ -1586,6 +1586,7 @@ ifeq ($(FETCH_INTERNAL_TOOLS),1)
 	$(QUIET) if [ -d $(SUPPORT_DIR) ] && [ ! -e $(SUPPORT_DIR)/toolchain ] ; then mkdir -p $(SUPPORT_DIR)/toolchain ; fi ;
 	@echo "    NPM-I handlebars"
 	$(QUIET) cd $(SUPPORT_DIR)/toolchain ; $(TC_NPM_EXE) install handlebars ;
+	$(QUIET) sed -i '1s|.*|#!$(TC_NPM_EXE)|' $(TC_HANDLEBARS_INT_EXE)
 # endif
 else
 	@ if [ ! -e $(TC_HANDLEBARS_INT_EXE) ] ; then echo "    ERROR: Internal handlebars is necessary but not present, and FETCH_INTERNAL_TOOLS != 1." ; false ; fi ;
