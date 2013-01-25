@@ -388,6 +388,10 @@ TC_COFFEE_EXE:=$(shell which coffee || true)
 endif
 ifeq ($(shell which handlebars || true),)
 TC_HANDLEBARS_EXE:=$(TC_HANDLEBARS_INT_EXE)
+ifeq ($(shell which npm || true),)
+OLD_PATH:=$(PATH)
+export PATH=$(shell dirname $(TC_NODE_INT_EXE)):$(OLD_PATH)
+endif
 else
 TC_HANDLEBARS_EXE:=$(shell which handlebars || true)
 endif
@@ -1586,7 +1590,6 @@ ifeq ($(FETCH_INTERNAL_TOOLS),1)
 	$(QUIET) if [ -d $(SUPPORT_DIR) ] && [ ! -e $(SUPPORT_DIR)/toolchain ] ; then mkdir -p $(SUPPORT_DIR)/toolchain ; fi ;
 	@echo "    NPM-I handlebars"
 	$(QUIET) cd $(SUPPORT_DIR)/toolchain ; $(TC_NPM_EXE) install handlebars ;
-	$(QUIET) sed -i '1s|.*|#!$(TC_NPM_EXE)|' $(TC_HANDLEBARS_INT_EXE)
 # endif
 else
 	@ if [ ! -e $(TC_HANDLEBARS_INT_EXE) ] ; then echo "    ERROR: Internal handlebars is necessary but not present, and FETCH_INTERNAL_TOOLS != 1." ; false ; fi ;
