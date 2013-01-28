@@ -388,10 +388,6 @@ TC_COFFEE_EXE:=$(shell which coffee || true)
 endif
 ifeq ($(shell which handlebars || true),)
 TC_HANDLEBARS_EXE:=$(TC_HANDLEBARS_INT_EXE)
-ifeq ($(shell which npm || true),)
-OLD_PATH:=$(PATH)
-export PATH=$(shell dirname $(TC_NODE_INT_EXE)):$(OLD_PATH)
-endif
 else
 TC_HANDLEBARS_EXE:=$(shell which handlebars || true)
 endif
@@ -1312,7 +1308,7 @@ $(WEB_ASSETS_BUILD_DIR)/js/template.js: $(WEB_SOURCE_DIR)/static/handlebars $(TC
 ifeq ($(VERBOSE),0)
 	@echo "    HANDLEBARS $@"
 endif
-	$(QUIET) env TC_HANDLEBARS_EXE=$(TC_HANDLEBARS_EXE) ../scripts/build_handlebars_templates.py $(WEB_SOURCE_DIR)/static/handlebars $(BUILD_DIR) $(WEB_ASSETS_BUILD_DIR)/js
+	$(QUIET) env TC_HANDLEBARS_EXE=$(TC_HANDLEBARS_EXE) PATH=$(shell dirname $(TC_NODE_EXE)):$(PATH) ../scripts/build_handlebars_templates.py $(WEB_SOURCE_DIR)/static/handlebars $(BUILD_DIR) $(WEB_ASSETS_BUILD_DIR)/js
 
 $(WEB_ASSETS_OBJ_DIR)/cluster-min.concat.coffee: $(COFFEE_SOURCES)
 	$(QUIET) mkdir -p $(WEB_ASSETS_OBJ_DIR)
