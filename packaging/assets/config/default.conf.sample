@@ -6,8 +6,7 @@
 #
 # See http://www.rethinkdb.com/docs/guides/startup/ for the complete documentation
 #
-# Uncomment an option to change its value. The default value of some options
-# uses the <name> variable that is equal to the basename of this file.
+# Uncomment an option to change its value.
 
 ###############################
 ## Init script configuration
@@ -19,7 +18,7 @@
 # rungroup=rethinkdb
 
 ## Stash the pid in this file when the process is running
-## Default: /var/run/rethinkdb/<name>/pid_file
+## Default: /var/run/rethinkdb/<name>/pid_file (where <name> is the name of this config file without the extension)
 # pid-file=/var/run/rethinkdb/rethinkdb.pid
 
 ###############################
@@ -29,7 +28,7 @@
 ### File path options
 
 ## Directory to store data and metadata
-## Default: /var/lib/rethinkdb/<name>/
+## Default: /var/lib/rethinkdb/<name>/ (where <name> is the name of this file without the extension)
 # directory=/var/lib/rethinkdb/default
 
 ### Network options
