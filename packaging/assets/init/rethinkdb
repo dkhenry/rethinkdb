@@ -188,6 +188,11 @@ do
     if [ "$itask" = "start" -o "$itask" = "restart" -o "$itask" = "restart" -o "$itask" = "force-restart" ] ; then
         # start rethinkdb
 
+        if ! get "$conf" bind x; then
+            echo "rethinkdb: $instance_name: will only listen on local network interfaces."
+            echo "rethinkdb: $instance_name: To expose rethinkdb on the network, add the 'bind=all' option to $rtdbconffile"
+        fi
+
 	if [ -e /var/run -a "${rtdbpidfile#/var/run}" != "$rtdbpidfile" ] ; then
 	    mkdir -p "`dirname "$rtdbpidfile"`"
 	fi
