@@ -8,6 +8,7 @@ case "$1" in
 
     if [ "$1" = purge ]; then
       deluser --system --quiet rethinkdb || true
+      delgroup --system --quiet rethinkdb || true
     fi
     ;;
   *)

@@ -26,8 +26,8 @@ case "$1" in
     ;;
 
   rethinkdb_existing_config_files=/etc/rethinkdb/instances.d/*.conf
-  if [ "$rethinkdb_existing_config_files" = "" ]; then
-    echo The RethinkDB startup service is installed but disabled. To configure RethinkDB,
+  if [ "$rethinkdb_existing_config_files" = "/etc/rethinkdb/instances.d/*.conf" ]; then
+    echo The RethinkDB startup service is installed but disabled. To enable it,
     echo follow the instructions in the guide located at http://www.rethinkdb.com/docs/guides/startup/
   fi
 
