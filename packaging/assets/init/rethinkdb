@@ -14,7 +14,6 @@
 # Description:       This looks in /etc/rethinkdb/instances.d for rethinkdb config files and launches, stops, or examines each instance described there.
 ### END INIT INFO
 
-set -x
 set -e -u
 
 itask="${1:-}"
@@ -46,12 +45,13 @@ conf_read () {
     local _dict="#"
     local n=1
     local line sect key val
-    while read -r line; do
-        line=${line%%#*}
+    while read -r full_line; do
+        line=${full_line%%#*}
         if conf_read_line "$line" key val; then
             _dict="$_dict$key=$val#"
         elif [ "`echo -n $line`" != "" ]; then
-            echo "$0: $1: parse error on line $n" >&2
+            echo "$0: $1: parse error on line $n:" >&2
+            echo "$full_line"
             unset -v "$2"
             return 1
         fi
@@ -92,7 +92,7 @@ next_free_port_offset () {
         return
     fi
     for file in "$rtdbconfigdir"/instances.d/.*.port-offset ; do
-        next="`cat "$file"`"
+        next=`cat "$file"`
         if [ "$port" -le "$next" ]; then
             port="$((next + 1))"
         fi
@@ -101,15 +101,15 @@ next_free_port_offset () {
 }
 
 if [ "$itask" = "" ] ; then
-	echo "Usage: /etc/init.d/rethinkdb [start|stop|restart|force-restart|status]" ;
-        exit 1
+    echo "Usage: /etc/init.d/rethinkdb [start|stop|restart|force-restart|status]" ;
+    exit 1
 fi
 
 # We check for active configurations .
 if ! ls "$rtdbconfigdir"/instances.d/*.conf >/dev/null 2>/dev/null ; then
-	echo "rethinkdb: No instances defined in $rtdbconfigdir/instances.d/"
-	echo "rethinkdb: See http://www.rethinkdb.com/docs/guides/startup/ for more information" ;
-        exit
+    echo "rethinkdb: No instances defined in $rtdbconfigdir/instances.d/"
+    echo "rethinkdb: See http://www.rethinkdb.com/docs/guides/startup/ for more information" ;
+    exit
 fi
 
 for rtdbconffile in "$rtdbconfigdir"/instances.d/*.conf ;
@@ -136,9 +136,10 @@ do
         rtdbpidfile="/var/run/rethinkdb/$instance_name/pid_file"
         parent_directory="`dirname "$rtdbpidfile"`"
         if [ ! -e "$parent_directory" ]; then
-            mkdir -p "$parent_directory" && \
-                ( test -n "${runuser:-}"  && chown -- "$runuser"  "$parent_directory" ) && \
-                ( test -n "${rungroup:-}" && chgrp -- "$rungroup" "$parent_directory" )
+            if mkdir -p "$parent_directory"; then
+                test -n "${runuser:-}"  && chown -- "$runuser"  "$parent_directory"
+                test -n "${rungroup:-}" && chgrp -- "$rungroup" "$parent_directory"
+            fi
         fi
         
         set -- "$@" --pid-file "$rtdbpidfile"
@@ -149,9 +150,10 @@ do
         rtdb_directory="/var/lib/rethinkdb/$instance_name/data"
         parent_directory="/var/lib/rethinkdb/$instance_name"
         if [ ! -e "$parent_directory" ]; then
-            mkdir "$parent_directory" && \
-                ( test -n "${runuser:-}"  && chown -- "$runuser"  "$parent_directory" ) && \
-                ( test -n "${rungroup:-}" && chgrp -- "$rungroup" "$parent_directory" )
+            if mkdir -p "$parent_directory"; then
+                test -n "${runuser:-}"  && chown -- "$runuser"  "$parent_directory"
+                test -n "${rungroup:-}" && chgrp -- "$rungroup" "$parent_directory"
+            fi
         fi
         set -- "$@" --directory "$rtdb_directory" 
     fi
@@ -175,14 +177,14 @@ do
     if [ "$itask" = "stop" -o "$itask" = "restart" -o "$itask" = "restart" -o "$itask" = "force-restart" ] ; then
         # stop rethinkdb
 
-	if [ ! -e "$rtdbpidfile" ] ; then
-	    echo "rethinkdb: $instance_name: The instance is not running (there is no pid file)"
-	elif is_running "`cat "$rtdbpidfile"`" ; then
+        if [ ! -e "$rtdbpidfile" ] ; then
+            echo "rethinkdb: $instance_name: The instance is not running (there is no pid file)"
+        elif is_running "`cat "$rtdbpidfile"`" ; then
             echo "rethinkdb: $instance_name: Stopping instance (pid `cat "$rtdbpidfile"`)"
             kill -INT "`cat "$rtdbpidfile"`"
         else
             rm -f "$rtdbpidfile"
-	fi
+        fi
     fi
 
     if [ "$itask" = "start" -o "$itask" = "restart" -o "$itask" = "restart" -o "$itask" = "force-restart" ] ; then
@@ -193,32 +195,32 @@ do
             echo "rethinkdb: $instance_name: To expose rethinkdb on the network, add the 'bind=all' option to $rtdbconffile"
         fi
 
-	if [ -e /var/run -a "${rtdbpidfile#/var/run}" != "$rtdbpidfile" ] ; then
-	    mkdir -p "`dirname "$rtdbpidfile"`"
-	fi
+        if [ -e /var/run -a "${rtdbpidfile#/var/run}" != "$rtdbpidfile" ] ; then
+            mkdir -p "`dirname "$rtdbpidfile"`"
+        fi
 
-	if [ -e "$rtdbpidfile" ] && is_running "$(cat "$rtdbpidfile")"; then
-	    echo "rethinkdb: $instance_name: The instance has already started"
-	else
+        if [ -e "$rtdbpidfile" ] && is_running "$(cat "$rtdbpidfile")"; then
+            echo "rethinkdb: $instance_name: The instance has already started"
+        else
             if [ -e "$rtdbpidfile" ] ; then
                 rm "$rtdbpidfile"
             fi
             echo "rethinkdb: $instance_name: Starting instance. (logging to \`$rtdb_directory/log_file')"
-	    start-stop-daemon --start --pidfile "$rtdbpidfile" --startas "$rtdbbin" --background "$@"
+            start-stop-daemon --start --pidfile "$rtdbpidfile" --startas "$rtdbbin" --background "$@"
         fi
     fi
 
     if [ "$itask" = "status" ] ; then
         # show the rethinkdb status
 
-	if [ -e "$rtdbpidfile" ] ; then
-	    if ! is_running "$(cat "$rtdbpidfile")"; then
-		echo "rethinkdb: $instance_name: stop/crashed"
-	    else
-		echo "rethinkdb: $instance_name: start/running, pid `cat "$rtdbpidfile"`"
-	    fi
-	else
-	    echo "rethinkdb: $instance_name: stop/waiting"
-	fi
+        if [ -e "$rtdbpidfile" ] ; then
+            if ! is_running "$(cat "$rtdbpidfile")"; then
+                echo "rethinkdb: $instance_name: stop/crashed"
+            else
+                echo "rethinkdb: $instance_name: start/running, pid `cat "$rtdbpidfile"`"
+            fi
+        else
+            echo "rethinkdb: $instance_name: stop/waiting"
+        fi
     fi
 done

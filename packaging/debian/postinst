@@ -12,7 +12,7 @@ priority=PRIORITY
 install_links=0
 case "$1" in
   configure|abort-upgrade|abort-remove|abort-deconfigure)
-    # update-alternatives is idempotent (in the sence described in the Debian Policy Manual: Package maintainer scripts and installation procedure)
+    # update-alternatives is idempotent (in the sense described in the Debian Policy Manual: Package maintainer scripts and installation procedure)
     # prerm script could delete the link in case of abort-*, so we need to recreate it again.
   if [ UPDATE_ALTERNATIVES = 1 ] ;
   then
@@ -25,8 +25,7 @@ case "$1" in
     invoke-rc.d rethinkdb start ;
     ;;
 
-  rethinkdb_existing_config_files=/etc/rethinkdb/instances.d/*.conf
-  if [ "$rethinkdb_existing_config_files" = "/etc/rethinkdb/instances.d/*.conf" ]; then
+  if [ "`find /etc/rethinkdb/instances.d -maxdepth 1 -type f -name '*.conf' >/dev/null`" = "" ]; then
     echo The RethinkDB startup service is installed but disabled. To enable it,
     echo follow the instructions in the guide located at http://www.rethinkdb.com/docs/guides/startup/
   fi
