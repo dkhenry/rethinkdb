@@ -16,6 +16,10 @@
 
 set -e -u
 
+# set m4 quotes to characters we will never use
+changequote(`', `')
+#'
+
 itask="${1:-}"
 
 rtdbbin=/usr/bin/rethinkdb ;

@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+# set m4 quotes to characters we will never use
+changequote(`', `')
+#'
+
 bin_dir=BIN_DIR
 man1_dir=MAN1_DIR
 bash_completion_dir=BASH_COMPLETION_DIR
